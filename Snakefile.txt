@@ -1,0 +1,19 @@
+REF = "data/chrM.fa"
+R1 = "data/sample_R1.fastq.gz"
+R2 = "data/sample_R2.fastq.gz"
+BAM = "data/sample.chrM.sorted.bam"
+VCF = "data/sample.chrM.vcf.gz"
+
+rule all: input: VCF
+rule index_ref:
+  input: REF
+  output: "data/chrM.fa.fai"
+  shell: "samtools faidx {input}; bwa index {input}"
+rule align:
+  input: REF,R1,R2,"data/chrM.fa.fai"
+  output: BAM
+  shell: "bwa mem -t 4 {input[0]} {input[1]} {input[2]} | samtools sort -o {output}; samtools index {output}"
+rule call:
+  input: REF,BAM
+  output: VCF, VCF+".tbi"
+  shell: "bcftools mpileup -f {input[0]} {input[1]} -Ou | bcftools call -mv -Oz -o {output}; tabix -p vcf {output}"
